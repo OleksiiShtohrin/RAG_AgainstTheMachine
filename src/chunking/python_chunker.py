@@ -87,10 +87,25 @@ class PythonChunker(BaseChunker):
             max_chunk_size=max_chunk_size,
         )
 
+        chunk_size = min(
+            target_chunk_size,
+            max_chunk_size,
+        )
+
+        if overlap < 0:
+            raise ValueError(
+                "overlap cannot be negative"
+            )
+
+        effective_overlap = min(
+            overlap,
+            chunk_size - 1,
+        )
+
         self._assembler = ChunkAssembler(
             max_chunk_size=max_chunk_size,
             target_chunk_size=target_chunk_size,
-            overlap=overlap,
+            overlap=effective_overlap,
         )
 
     def chunk(

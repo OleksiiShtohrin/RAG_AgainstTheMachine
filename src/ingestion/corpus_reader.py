@@ -86,7 +86,12 @@ class CorpusReader:
         return sorted(files)
 
     def _relative_path(self, file_path: Path) -> str:
-        """Return the corpus path in project-relative POSIX form."""
-        project_root = Path.cwd()
-        relative = file_path.resolve().relative_to(project_root.resolve())
-        return relative.as_posix()
+        """Return a project-relative path when possible."""
+        resolved_file = file_path.resolve()
+        project_root = Path.cwd().resolve()
+
+        try:
+            relative = resolved_file.relative_to(project_root)
+            return relative.as_posix()
+        except ValueError:
+            return resolved_file.as_posix()
