@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from tqdm import tqdm
 from rank_bm25 import BM25Okapi
 
 from src.chunking.base import Chunk
@@ -27,7 +28,11 @@ class BM25Index:
 
         corpus_tokens: List[List[str]] = []
 
-        for chunk in chunks:
+        for chunk in tqdm(
+            chunks,
+            desc="Tokenizing",
+            unit="chunk",
+        ):
             text = (
                 f"{chunk.file_path} "
                 f"{chunk.file_path} "

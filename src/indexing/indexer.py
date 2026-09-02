@@ -36,7 +36,7 @@ class CorpusIndexer:
 
         all_chunks: list[Chunk] = []
 
-        documents = reader.iter_documents()
+        documents = list(reader.iter_documents())
 
         for document in tqdm(
             documents,
