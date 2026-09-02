@@ -6,7 +6,7 @@ PYTHON ?= uv run python
 MYPY ?= uv run mypy
 FLAKE8 ?= uv run flake8
 
-.PHONY: install run debug clean fclean lint lint-strict
+.PHONY: install run debug test clean fclean lint lint-strict
 
 install:
 	uv sync --all-extras
@@ -16,6 +16,9 @@ run:
 
 debug:
 	$(PYTHON) -m pdb -m src
+
+test:
+	uv run pytest tests -v
 
 clean:
 	rm -rf `find . -type d -name __pycache__`
