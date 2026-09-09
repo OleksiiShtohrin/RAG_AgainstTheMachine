@@ -1,7 +1,7 @@
 """Fast LLM response generation engine using HuggingFace Transformers."""
 
 import torch
-from typing import List, Optional
+from typing import Any, List, Optional
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from src.generation.prompter import ContextPrompter
 from src.models.source import MinimalSource
@@ -22,7 +22,10 @@ class AnswerGenerator:
         if device is None:
             if torch.cuda.is_available():
                 self.device = "cuda"
-            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            elif (
+                hasattr(torch.backends, "mps")
+                and torch.backends.mps.is_available()
+            ):
                 self.device = "mps"
             else:
                 self.device = "cpu"
@@ -39,7 +42,8 @@ class AnswerGenerator:
             device_map=self.device,
             trust_remote_code=True,
         )
-        self.model.eval()
+        model: Any = self.model
+        model.eval()
 
     def generate_answer(
         self,
@@ -67,8 +71,9 @@ class AnswerGenerator:
             self.device
         )
 
+        model: Any = self.model
         with torch.inference_mode():
-            outputs = self.model.generate(
+            outputs = model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
@@ -76,7 +81,7 @@ class AnswerGenerator:
             )
 
         generated_ids = [
-            output_ids[len(input_ids) :]
+            output_ids[len(input_ids):]
             for input_ids, output_ids in zip(inputs.input_ids, outputs)
         ]
         response = self.tokenizer.batch_decode(

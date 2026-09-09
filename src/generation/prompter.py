@@ -30,7 +30,7 @@ class ContextPrompter:
                 ) as f:
                     file_content = f.read()
                 snippet = file_content[
-                    source.first_character_index : source.last_character_index
+                    source.first_character_index:source.last_character_index
                 ].strip()
                 if not snippet:
                     continue

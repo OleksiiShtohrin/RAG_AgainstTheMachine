@@ -23,16 +23,29 @@ def _node_to_range(
     source: str,
     node: ast.AST,
 ) -> tuple[int, int]:
+    start_line = getattr(node, "lineno", None)
+    start_column = getattr(node, "col_offset", None)
+    end_line = getattr(node, "end_lineno", None)
+    end_column = getattr(node, "end_col_offset", None)
+
+    if (
+        not isinstance(start_line, int)
+        or not isinstance(start_column, int)
+        or not isinstance(end_line, int)
+        or not isinstance(end_column, int)
+    ):
+        raise ValueError("AST node has no source position")
+
     start = _line_column_to_index(
         source,
-        node.lineno,
-        node.col_offset,
+        start_line,
+        start_column,
     )
 
     end = _line_column_to_index(
         source,
-        node.end_lineno,
-        node.end_col_offset,
+        end_line,
+        end_column,
     )
 
     return start, end
@@ -183,7 +196,7 @@ class PythonChunker(BaseChunker):
             )
 
             if _is_declaration(node):
-                if module_start is not None:
+                if module_start is not None and module_end is not None:
                     units.append(
                         (
                             module_start,
@@ -208,7 +221,7 @@ class PythonChunker(BaseChunker):
 
             previous_end = node_end
 
-        if module_start is not None:
+        if module_start is not None and module_end is not None:
             units.append(
                 (
                     module_start,

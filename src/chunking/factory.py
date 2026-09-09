@@ -8,7 +8,8 @@ from src.chunking.python_chunker import PythonChunker
 
 
 class ChunkerFactory:
-    """Selects and instantiates the correct chunker strategy for a given file."""
+    """Selects and instantiates the correct chunker strategy
+    for a given file."""
 
     _EXTENSION_MAP: Dict[str, Type[BaseChunker]] = {
         ".py": PythonChunker,

@@ -6,7 +6,8 @@ from src.chunking.base import BaseChunker, Chunk
 
 
 class MarkdownChunker(BaseChunker):
-    """Chunks Markdown and text files with overlap for high retrieval recall."""
+    """Chunks Markdown and text files with overlap
+    for high retrieval recall."""
 
     def __init__(
         self,
