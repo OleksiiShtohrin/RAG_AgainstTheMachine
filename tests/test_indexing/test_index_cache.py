@@ -44,3 +44,18 @@ def test_corpus_indexer_loads_index_from_cache_on_second_call(
     assert first is second
     assert first is index
     assert load_calls == 1
+
+
+def test_index_cache_stores_and_returns_index() -> None:
+    cache = IndexCache()
+    index = object()
+
+    cache.set("data/processed", index)
+
+    assert cache.get("data/processed") is index
+
+
+def test_index_cache_returns_none_for_missing_index() -> None:
+    cache = IndexCache()
+
+    assert cache.get("data/processed") is None
