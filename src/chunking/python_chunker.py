@@ -126,29 +126,34 @@ class PythonChunker(BaseChunker):
         file_path: str,
         content: str,
     ) -> list[Chunk]:
-        """Chunk Python source using AST logical units."""
-        tree = self._parse_ast(content)
+        """Chunk Python source using AST logical units with fallback."""
+        if not content.strip():
+            return []
 
-        nodes = self._get_top_level_nodes(tree)
+        try:
+            tree = self._parse_ast(content)
+            nodes = self._get_top_level_nodes(tree)
+            units = self._get_logical_units(content, nodes)
 
-        units = self._get_logical_units(
-            content,
-            nodes,
-        )
-
-        chunks: list[Chunk] = []
-
-        for start, end in units:
-            chunks.extend(
-                self._assembler.assemble(
-                    file_path=file_path,
-                    content=content,
-                    start=start,
-                    end=end,
+            chunks: list[Chunk] = []
+            for start, end in units:
+                chunks.extend(
+                    self._assembler.assemble(
+                        file_path=file_path,
+                        content=content,
+                        start=start,
+                        end=end,
+                    )
                 )
+            return chunks
+        except (SyntaxError, ValueError):
+            # Fallback if AST parsing fails on broken or non-standard syntax
+            return self._assembler.assemble(
+                file_path=file_path,
+                content=content,
+                start=0,
+                end=len(content),
             )
-
-        return chunks
 
     def _parse_ast(
         self,

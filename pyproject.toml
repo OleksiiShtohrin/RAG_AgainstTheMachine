@@ -40,7 +40,6 @@ check_untyped_defs = true
 exclude = [
     "^.venv/",
     "^data/",
-    "^subject/",
     "^tests/",
 ]
 
