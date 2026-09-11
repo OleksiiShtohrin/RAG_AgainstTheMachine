@@ -10,6 +10,7 @@ from src.retrieval.lexical_retriever import LexicalRetriever
 from src.generation.generator import AnswerGenerator
 from src.evaluation.metrics import calculate_recall_at_k
 from src.models.question import AnsweredQuestion
+from src.models.source import MinimalSource
 from src.models.results import (
     MinimalAnswer,
     MinimalSearchResults,
@@ -17,6 +18,7 @@ from src.models.results import (
     StudentSearchResultsAndAnswer,
 )
 from src.utils.file_io import read_json_file, save_pydantic_to_json
+from src.utils.cache import QueryCache
 
 
 class CLI:
@@ -87,7 +89,28 @@ class CLI:
 
             index = CorpusIndexer.load_index(index_dir)
             retriever = LexicalRetriever(index)
-            sources = retriever.retrieve(query=query, k=k)
+
+            cache = QueryCache()
+
+            cached = cache.get(
+                "search",
+                query,
+                k=k,
+                index_dir=index_dir,
+            )
+
+            if cached is not None:
+                sources = [MinimalSource(**item) for item in cached]
+            else:
+                sources = retriever.retrieve(query=query, k=k)
+
+                cache.set(
+                    "search",
+                    query,
+                    [source.model_dump() for source in sources],
+                    k=k,
+                    index_dir=index_dir,
+                )
 
             for src in sources:
                 loc = (
@@ -317,3 +340,165 @@ class CLI:
             )
         except Exception as e:
             print(f"An error occurred during evaluation: {e}", file=sys.stderr)
+
+    def index_semantic(
+        self,
+        output_dir: str = "data/processed",
+        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+    ) -> None:
+        """Build and save semantic vector index (Bonus 1)."""
+        from src.indexing.semantic_index import SemanticIndex
+
+        bm25_index = CorpusIndexer.load_index(output_dir)
+        print(f"Generating embeddings for {len(bm25_index.chunks)} chunks...")
+        sem_index = SemanticIndex.build(
+            bm25_index.chunks, model_name=model_name
+        )
+        sem_index.save(os.path.join(output_dir, "semantic_index.pkl"))
+        print("Semantic vector index successfully saved!")
+
+    def index_incremental(
+        self,
+        raw_dir: str = "data/raw",
+        output_dir: str = "data/processed",
+    ) -> None:
+        """Run incremental delta indexing for changed files (Bonus 3)."""
+        from src.indexing.incremental_indexer import IncrementalIndexer
+
+        indexer = IncrementalIndexer()
+        indexer.update_index(raw_dir=raw_dir, output_dir=output_dir)
+
+    def search_hybrid(
+        self,
+        query: str,
+        k: int = 5,
+        output_dir: str = "data/processed",
+    ) -> None:
+        """Search using Hybrid BM25 + Semantic RRF (Bonus 2)."""
+        from src.indexing.semantic_index import SemanticIndex
+        from src.retrieval.hybrid_retriever import HybridRetriever
+
+        bm25_idx = CorpusIndexer.load_index(output_dir)
+        sem_idx = SemanticIndex.load(
+            os.path.join(output_dir, "semantic_index.pkl")
+        )
+        retriever = HybridRetriever(bm25_idx, sem_idx)
+
+        cache = QueryCache()
+
+        cached = cache.get(
+            "hybrid_search",
+            query,
+            k=k,
+            output_dir=output_dir,
+        )
+
+        if cached is not None:
+            sources = [MinimalSource(**item) for item in cached]
+        else:
+            sources = retriever.retrieve(query, k=k)
+            cache.set(
+                "hybrid_search",
+                query,
+                [source.model_dump() for source in sources],
+                k=k,
+                output_dir=output_dir,
+            )
+
+        for s in sources:
+            loc = f"[{s.first_character_index}:{s.last_character_index}]"
+            print(f"{s.file_path} {loc}")
+
+    def search_hybrid_dataset(
+        self,
+        dataset_path: str,
+        k: int = 10,
+        save_directory: str = (
+            "data/output/search_results_hybrid/UnansweredQuestions"
+        ),
+        output_dir: str = "data/processed",
+    ) -> None:
+        """Batch hybrid search over a dataset (Bonus 2)."""
+        try:
+            raw_data = read_json_file(dataset_path)
+            if raw_data is None:
+                print(
+                    f"Error: Could not read dataset file at {dataset_path}",
+                    file=sys.stderr,
+                )
+                return
+
+            questions_data: List[Dict[str, Any]] = (
+                raw_data.get("rag_questions", [])
+                if isinstance(raw_data, dict)
+                else raw_data
+            )
+
+            from src.indexing.semantic_index import SemanticIndex
+            from src.retrieval.hybrid_retriever import HybridRetriever
+
+            bm25_index = CorpusIndexer.load_index(output_dir)
+            semantic_index = SemanticIndex.load(
+                os.path.join(output_dir, "semantic_index.pkl")
+            )
+            retriever = HybridRetriever(
+                bm25_index,
+                semantic_index,
+            )
+
+            results: List[MinimalSearchResults] = []
+
+            for item in tqdm(
+                questions_data,
+                desc="Hybrid search dataset",
+                unit="q",
+            ):
+                q_id = str(item.get("question_id", ""))
+                q_text = str(item.get("question", ""))
+
+                sources = (
+                    retriever.retrieve(query=q_text, k=k)
+                    if q_text
+                    else []
+                )
+
+                results.append(
+                    MinimalSearchResults(
+                        question_id=q_id,
+                        question=q_text,
+                        retrieved_sources=sources,
+                    )
+                )
+
+            student_results = StudentSearchResults(
+                search_results=results,
+                k=k,
+            )
+
+            filename = os.path.basename(dataset_path)
+            dest_file = os.path.join(
+                save_directory,
+                filename,
+            )
+
+            save_pydantic_to_json(
+                student_results,
+                dest_file,
+            )
+
+            print(
+                f"Saved hybrid student_search_results to {dest_file}"
+            )
+
+        except Exception as e:
+            print(
+                f"An error occurred during hybrid dataset search: {e}",
+                file=sys.stderr,
+            )
+
+    def serve(self, host: str = "127.0.0.1", port: int = 8000) -> None:
+        """Start local HTTP REST API server (Bonus 5)."""
+        import uvicorn
+
+        print(f"Starting RAG API at http://{host}:{port}")
+        uvicorn.run("src.server:app", host=host, port=port, reload=False)

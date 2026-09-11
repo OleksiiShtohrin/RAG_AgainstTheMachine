@@ -4,15 +4,19 @@ import os
 import pickle
 
 from tqdm import tqdm
+from typing import cast
 
 from src.chunking.base import Chunk
 from src.chunking.factory import ChunkerFactory
 from src.indexing.bm25_index import BM25Index
 from src.ingestion.corpus_reader import CorpusReader
+from src.indexing.index_cache import IndexCache
 
 
 class CorpusIndexer:
     """Manage the end-to-end indexing lifecycle of a codebase."""
+
+    _index_cache = IndexCache()
 
     def __init__(self, max_chunk_size: int = 2000) -> None:
         """Initialize the indexer with a maximum chunk size."""
@@ -85,7 +89,13 @@ class CorpusIndexer:
                 f"Index file not found at: {index_file}"
             )
 
+        cached = cls._index_cache.get(output_dir)
+        if cached is not None:
+            return cast(BM25Index, cached)
+
         with open(index_file, "rb") as file:
             index: BM25Index = pickle.load(file)
+
+        cls._index_cache.set(output_dir, index)
 
         return index
