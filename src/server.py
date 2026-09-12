@@ -20,7 +20,11 @@ _generator: Optional[AnswerGenerator] = None
 
 
 def get_retriever() -> LexicalRetriever:
-    """Get or load retriever."""
+    """Get or lazily load lexical retriever singleton.
+
+    Returns:
+        Loaded LexicalRetriever instance.
+    """
     global _retriever
     if _retriever is None:
         index = CorpusIndexer.load_index("data/processed")
@@ -29,7 +33,11 @@ def get_retriever() -> LexicalRetriever:
 
 
 def get_generator() -> AnswerGenerator:
-    """Get or load answer generator."""
+    """Get or lazily load answer generator singleton.
+
+    Returns:
+        Loaded AnswerGenerator instance.
+    """
     global _generator
     if _generator is None:
         _generator = AnswerGenerator()
@@ -37,14 +45,25 @@ def get_generator() -> AnswerGenerator:
 
 
 class SearchRequest(BaseModel):
-    """Search request model."""
+    """Search request model.
+
+    Attributes:
+        query: Search question or prompt string.
+        k: Maximum number of source results to return.
+    """
 
     query: str
     k: int = 5
 
 
 class SearchResponse(BaseModel):
-    """Search response model."""
+    """Search response model.
+
+    Attributes:
+        query: Echoed search query string.
+        k: Requested candidate count.
+        results: Retrieved top-k MinimalSource locations.
+    """
 
     query: str
     k: int
@@ -52,14 +71,25 @@ class SearchResponse(BaseModel):
 
 
 class AnswerRequest(BaseModel):
-    """Answer request model."""
+    """Answer request model.
+
+    Attributes:
+        query: Search question string.
+        k: Number of retrieved source snippets for context.
+    """
 
     query: str
     k: int = 5
 
 
 class AnswerResponse(BaseModel):
-    """Answer response model."""
+    """Answer response model.
+
+    Attributes:
+        query: Echoed question string.
+        answer: Generated natural language answer.
+        sources: Retrieved source citations used as context.
+    """
 
     query: str
     answer: str
@@ -68,13 +98,27 @@ class AnswerResponse(BaseModel):
 
 @app.get("/health")
 def health() -> Dict[str, str]:
-    """Health check endpoint."""
+    """Health check endpoint.
+
+    Returns:
+        Service status dictionary indicating API availability.
+    """
     return {"status": "ok", "service": "rag-api"}
 
 
 @app.post("/search", response_model=SearchResponse)
 def search_endpoint(req: SearchRequest) -> SearchResponse:
-    """Retrieve top-k sources for a query."""
+    """Retrieve top-k sources for a query.
+
+    Args:
+        req: SearchRequest containing query and k.
+
+    Returns:
+        SearchResponse with retrieved source citations.
+
+    Raises:
+        HTTPException: If query string is empty.
+    """
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
     retriever = get_retriever()
@@ -84,7 +128,17 @@ def search_endpoint(req: SearchRequest) -> SearchResponse:
 
 @app.post("/answer", response_model=AnswerResponse)
 def answer_endpoint(req: AnswerRequest) -> AnswerResponse:
-    """Generate grounded answer with context citations."""
+    """Generate grounded answer with context citations.
+
+    Args:
+        req: AnswerRequest containing question and k.
+
+    Returns:
+        AnswerResponse with generated text and cited sources.
+
+    Raises:
+        HTTPException: If query string is empty.
+    """
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
     retriever = get_retriever()

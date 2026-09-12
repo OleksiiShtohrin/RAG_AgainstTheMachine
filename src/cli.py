@@ -346,7 +346,12 @@ class CLI:
         output_dir: str = "data/processed",
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
     ) -> None:
-        """Build and save semantic vector index (Bonus 1)."""
+        """Build and save semantic vector index (Bonus 1).
+
+        Args:
+            output_dir: Folder containing BM25 index and saving vector index.
+            model_name: Identifier for sentence embedding model.
+        """
         from src.indexing.semantic_index import SemanticIndex
 
         bm25_index = CorpusIndexer.load_index(output_dir)
@@ -362,7 +367,12 @@ class CLI:
         raw_dir: str = "data/raw",
         output_dir: str = "data/processed",
     ) -> None:
-        """Run incremental delta indexing for changed files (Bonus 3)."""
+        """Run incremental delta indexing for changed files (Bonus 3).
+
+        Args:
+            raw_dir: Root path to raw documents folder.
+            output_dir: Destination path for index and manifest.
+        """
         from src.indexing.incremental_indexer import IncrementalIndexer
 
         indexer = IncrementalIndexer()
@@ -374,7 +384,13 @@ class CLI:
         k: int = 5,
         output_dir: str = "data/processed",
     ) -> None:
-        """Search using Hybrid BM25 + Semantic RRF (Bonus 2)."""
+        """Search using Hybrid BM25 + Semantic RRF (Bonus 2).
+
+        Args:
+            query: The user search query string.
+            k: Number of top fused candidates to return.
+            output_dir: Folder containing both BM25 and vector indices.
+        """
         from src.indexing.semantic_index import SemanticIndex
         from src.retrieval.hybrid_retriever import HybridRetriever
 
@@ -418,7 +434,14 @@ class CLI:
         ),
         output_dir: str = "data/processed",
     ) -> None:
-        """Batch hybrid search over a dataset (Bonus 2)."""
+        """Batch hybrid search over a dataset (Bonus 2).
+
+        Args:
+            dataset_path: Path to dataset JSON file.
+            k: Number of results requested per question.
+            save_directory: Directory to save student hybrid search results.
+            output_dir: Directory where index files are located.
+        """
         try:
             raw_data = read_json_file(dataset_path)
             if raw_data is None:
@@ -497,7 +520,12 @@ class CLI:
             )
 
     def serve(self, host: str = "127.0.0.1", port: int = 8000) -> None:
-        """Start local HTTP REST API server (Bonus 5)."""
+        """Start local HTTP REST API server (Bonus 5).
+
+        Args:
+            host: Binding IP host interface.
+            port: Binding TCP listening port.
+        """
         import uvicorn
 
         print(f"Starting RAG API at http://{host}:{port}")
