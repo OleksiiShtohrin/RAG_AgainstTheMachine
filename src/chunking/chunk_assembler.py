@@ -18,6 +18,9 @@ class ChunkAssembler:
             max_chunk_size: Absolute maximum character limit per chunk.
             target_chunk_size: Target slice size.
             overlap: Number of characters to overlap between slices.
+
+        Raises:
+            ValueError: If sizes are non-positive or overlap is invalid.
         """
         if max_chunk_size <= 0:
             raise ValueError("max_chunk_size must be positive")
@@ -58,7 +61,10 @@ class ChunkAssembler:
             end: End character offset of the segment.
 
         Returns:
-            List of generated Chunk instances.
+            List of generated Chunk instances within boundaries.
+
+        Raises:
+            ValueError: If overlap is greater than or equal to chunk size.
         """
         chunk_size = min(
             self.target_chunk_size,

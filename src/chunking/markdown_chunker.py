@@ -15,7 +15,16 @@ class MarkdownChunker(BaseChunker):
         target_chunk_size: int = 800,
         overlap: int = 150,
     ) -> None:
-        """Initialize with max limit and target window."""
+        """Initialize MarkdownChunker with max limit and target window.
+
+        Args:
+            max_chunk_size: Maximum allowed characters per chunk (<= 2000).
+            target_chunk_size: Preferred chunk length.
+            overlap: Character overlap count between neighboring chunks.
+
+        Raises:
+            ValueError: If target_chunk_size is non-positive or overlap < 0.
+        """
         super().__init__(
             max_chunk_size=max_chunk_size,
         )
@@ -45,7 +54,15 @@ class MarkdownChunker(BaseChunker):
         file_path: str,
         content: str,
     ) -> List[Chunk]:
-        """Split text content into overlapping chunks within max_chunk_size."""
+        """Split text content into overlapping chunks within max_chunk_size.
+
+        Args:
+            file_path: Origin relative file path.
+            content: Raw text content of the markdown/text file.
+
+        Returns:
+            List of Chunk objects with exact character offset coordinates.
+        """
         if not content.strip():
             return []
 

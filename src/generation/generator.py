@@ -17,7 +17,13 @@ class AnswerGenerator:
         model_name: str = DEFAULT_MODEL,
         device: Optional[str] = None,
     ) -> None:
-        """Initialize tokenizer and model."""
+        """Initialize tokenizer and model for causal language modeling.
+
+        Args:
+            model_name: HuggingFace model identifier or local directory path.
+            device: Computing target device ('cuda', 'mps', 'cpu').
+                If None, detects available accelerators automatically.
+        """
         self.model_name = model_name
         if device is None:
             if torch.cuda.is_available():
@@ -51,7 +57,17 @@ class AnswerGenerator:
         sources: List[MinimalSource],
         max_new_tokens: int = 256,
     ) -> str:
-        """Generate a grounded answer quickly."""
+        """Generate a grounded answer based on retrieved context sources.
+
+        Args:
+            question: The user query string.
+            sources:
+                List of retrieved citations containing file paths and spans.
+            max_new_tokens: Maximum number of tokens the model can generate.
+
+        Returns:
+            The decoded and cleaned text response from the model.
+        """
         if not question.strip():
             return "No question provided."
 

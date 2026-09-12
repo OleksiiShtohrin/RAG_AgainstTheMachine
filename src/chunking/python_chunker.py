@@ -11,6 +11,16 @@ def _line_column_to_index(
     line: int,
     column: int,
 ) -> int:
+    """Convert line and column numbers into a 0-based character offset.
+
+    Args:
+        source: Complete source code string.
+        line: 1-based line index.
+        column: 0-based column offset.
+
+    Returns:
+        Absolute character index in the source string.
+    """
     lines = source.splitlines(keepends=True)
 
     return sum(
@@ -23,6 +33,18 @@ def _node_to_range(
     source: str,
     node: ast.AST,
 ) -> tuple[int, int]:
+    """Calculate character index start and end boundaries for an AST node.
+
+    Args:
+        source: Complete source code string.
+        node: Target AST node with line and column positions.
+
+    Returns:
+        Tuple of (start_char_index, end_char_index).
+
+    Raises:
+        ValueError: If node lacks line or column positioning attributes.
+    """
     start_line = getattr(node, "lineno", None)
     start_column = getattr(node, "col_offset", None)
     end_line = getattr(node, "end_lineno", None)
@@ -56,6 +78,16 @@ def _find_leading_comment_start(
     node_start: int,
     previous_end: int,
 ) -> int:
+    """Find start offset of comments immediately preceding an AST node.
+
+    Args:
+        content: Complete source code string.
+        node_start: Character offset where the AST node begins.
+        previous_end: Ending offset of the preceding AST node.
+
+    Returns:
+        Character offset where leading comments begin.
+    """
     gap = content[previous_end:node_start]
 
     lines = gap.splitlines(keepends=True)
@@ -76,6 +108,14 @@ def _find_leading_comment_start(
 
 
 def _is_declaration(node: ast.stmt) -> bool:
+    """Check whether an AST statement is a function or class definition.
+
+    Args:
+        node: Statement AST node to inspect.
+
+    Returns:
+        True if the statement is a class or function declaration.
+    """
     return isinstance(
         node,
         (
@@ -95,7 +135,16 @@ class PythonChunker(BaseChunker):
         target_chunk_size: int = 800,
         overlap: int = 150,
     ) -> None:
-        """Initialize Python chunker."""
+        """Initialize Python chunker with size and overlap limits.
+
+        Args:
+            max_chunk_size: Maximum characters allowed per chunk.
+            target_chunk_size: Target slice size.
+            overlap: Character overlap between consecutive chunks.
+
+        Raises:
+            ValueError: If overlap is negative.
+        """
         super().__init__(
             max_chunk_size=max_chunk_size,
         )
@@ -126,7 +175,15 @@ class PythonChunker(BaseChunker):
         file_path: str,
         content: str,
     ) -> list[Chunk]:
-        """Chunk Python source using AST logical units with fallback."""
+        """Chunk Python source using AST logical units with fallback.
+
+        Args:
+            file_path: Relative path to the Python source file.
+            content: Complete Python file content.
+
+        Returns:
+            List of generated Chunk instances.
+        """
         if not content.strip():
             return []
 
@@ -159,12 +216,28 @@ class PythonChunker(BaseChunker):
         self,
         content: str,
     ) -> ast.Module:
+        """Parse source content string into an AST module.
+
+        Args:
+            content: Raw Python code.
+
+        Returns:
+            Parsed ast.Module node.
+        """
         return ast.parse(content)
 
     def _get_top_level_nodes(
         self,
         tree: ast.Module,
     ) -> list[ast.stmt]:
+        """Extract top-level statement nodes from an AST module.
+
+        Args:
+            tree: Root ast.Module node.
+
+        Returns:
+            List of top-level statement nodes.
+        """
         return tree.body
 
     def _get_node_range(
@@ -172,6 +245,15 @@ class PythonChunker(BaseChunker):
         content: str,
         node: ast.AST,
     ) -> tuple[int, int]:
+        """Get start and end character offsets for an AST node.
+
+        Args:
+            content: Complete source code string.
+            node: AST node.
+
+        Returns:
+            Tuple of (start_char_index, end_char_index).
+        """
         return _node_to_range(
             content,
             node,
@@ -182,6 +264,15 @@ class PythonChunker(BaseChunker):
         content: str,
         nodes: list[ast.stmt],
     ) -> list[tuple[int, int]]:
+        """Group statements into logical spans (functions, classes, imports).
+
+        Args:
+            content: Complete source code string.
+            nodes: Top-level statement nodes.
+
+        Returns:
+            List of (start, end) character tuples representing logical units.
+        """
         units: list[tuple[int, int]] = []
 
         module_start = None

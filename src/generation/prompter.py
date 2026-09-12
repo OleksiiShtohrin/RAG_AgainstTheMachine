@@ -19,7 +19,15 @@ class ContextPrompter:
     def load_source_texts(
         cls, sources: List[MinimalSource], max_total_chars: int = 3000
     ) -> str:
-        """Read text snippets from disk based on MinimalSource coordinates."""
+        """Read text snippets from disk based on MinimalSource coordinates.
+
+        Args:
+            sources: List of source citations with character index spans.
+            max_total_chars: Budget ceiling for aggregated context characters.
+
+        Returns:
+            Formatted context string containing labeled source snippets.
+        """
         context_parts: List[str] = []
         current_chars = 0
 
@@ -50,7 +58,15 @@ class ContextPrompter:
     def build_chat_messages(
         cls, question: str, context: str
     ) -> List[Dict[str, str]]:
-        """Construct chat messages adhering to conversational format."""
+        """Construct chat messages adhering to conversational format.
+
+        Args:
+            question: The user question text.
+            context: Combined context string extracted from source snippets.
+
+        Returns:
+            List of message dictionaries with 'role' and 'content' keys.
+        """
         user_content = (
             f"Context:\n{context}\n\n"
             f"Question: {question}\n\n"
@@ -63,6 +79,13 @@ class ContextPrompter:
 
     @classmethod
     def clean_output(cls, text: str) -> str:
-        """Remove any <think>...</think> tags if model produces them."""
+        """Remove any <think>...</think> tags if model produces them.
+
+        Args:
+            text: Raw generated string from LLM inference.
+
+        Returns:
+            Cleaned text with internal thinking tags stripped out.
+        """
         cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
         return cleaned.strip()
