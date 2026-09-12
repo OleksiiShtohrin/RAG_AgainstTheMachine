@@ -16,13 +16,27 @@ class HybridRetriever(BaseRetriever):
         semantic_index: SemanticIndex,
         rrf_k: int = 60,
     ) -> None:
-        """Initialize hybrid retriever with both index instances."""
+        """Initialize hybrid retriever with both index instances.
+
+        Args:
+            bm25_index: Pre-built lexical BM25 index.
+            semantic_index: Pre-built dense vector semantic index.
+            rrf_k: Smoothing constant for Reciprocal Rank Fusion (default: 60).
+        """
         self.bm25_index = bm25_index
         self.semantic_index = semantic_index
         self.rrf_k = rrf_k
 
     def retrieve(self, query: str, k: int = 5) -> List[MinimalSource]:
-        """Retrieve top-k sources using fused rankings."""
+        """Retrieve top-k sources using fused rankings.
+
+        Args:
+            query: Search query text.
+            k: Number of top fused candidates to return.
+
+        Returns:
+            List of top-k MinimalSource instances ranked by RRF score.
+        """
         if k <= 0 or not query.strip():
             return []
 

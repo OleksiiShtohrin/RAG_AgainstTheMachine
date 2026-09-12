@@ -10,11 +10,23 @@ class SemanticRetriever(BaseRetriever):
     """Retrieves document chunks using vector embedding similarity."""
 
     def __init__(self, semantic_index: SemanticIndex) -> None:
-        """Initialize with loaded SemanticIndex."""
+        """Initialize semantic retriever with a loaded SemanticIndex.
+
+        Args:
+            semantic_index: Vector index containing embeddings and chunks.
+        """
         self.semantic_index = semantic_index
 
     def retrieve(self, query: str, k: int = 5) -> List[MinimalSource]:
-        """Retrieve top-k source locations based on semantic similarity."""
+        """Retrieve top-k source locations based on semantic similarity.
+
+        Args:
+            query: The user query string.
+            k: Number of most relevant candidates to return.
+
+        Returns:
+            List of top-k MinimalSource objects covering matching spans.
+        """
         if k <= 0 or not query.strip():
             return []
 
