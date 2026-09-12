@@ -19,7 +19,14 @@ class CorpusIndexer:
     _index_cache = IndexCache()
 
     def __init__(self, max_chunk_size: int = 2000) -> None:
-        """Initialize the indexer with a maximum chunk size."""
+        """Initialize the indexer with a maximum chunk size constraint.
+
+        Args:
+            max_chunk_size: Maximum allowed character length per chunk.
+
+        Raises:
+            ValueError: If max_chunk_size is non-positive or exceeds 2000.
+        """
         if max_chunk_size <= 0:
             raise ValueError("max_chunk_size must be positive.")
 
@@ -35,7 +42,15 @@ class CorpusIndexer:
         raw_dir: str = "data/raw",
         output_dir: str = "data/processed",
     ) -> BM25Index:
-        """Read, chunk, index, and persist the corpus."""
+        """Read, chunk, index, and persist the corpus to disk.
+
+        Args:
+            raw_dir: Root path to raw corpus documents.
+            output_dir: Destination path for serialized index files.
+
+        Returns:
+            Constructed BM25Index instance.
+        """
         reader = CorpusReader(raw_dir)
 
         all_chunks: list[Chunk] = []
@@ -78,7 +93,17 @@ class CorpusIndexer:
         cls,
         output_dir: str = "data/processed",
     ) -> BM25Index:
-        """Load a persisted BM25 index from disk."""
+        """Load a persisted BM25 index from disk with in-memory caching.
+
+        Args:
+            output_dir: Folder containing the bm25_index.pkl file.
+
+        Returns:
+            Deserialized BM25Index instance.
+
+        Raises:
+            FileNotFoundError: If the index file does not exist on disk.
+        """
         index_file = os.path.join(
             output_dir,
             "bm25_index.pkl",

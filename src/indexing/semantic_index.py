@@ -29,7 +29,18 @@ class SemanticIndex:
         batch_size: int = 64,
         device: Optional[str] = None,
     ) -> "SemanticIndex":
-        """Build vector embeddings index from chunks."""
+        """Build vector embeddings index from chunks using a Transformer model.
+
+        Args:
+            chunks: List of document chunks to encode.
+            model_name:
+                HuggingFace identifier for the sentence embedding model.
+            batch_size: Number of texts per forward inference pass.
+            device: Computing target device ('cuda' or 'cpu').
+
+        Returns:
+            Instantiated SemanticIndex holding chunk data and embedding tensor.
+        """
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -89,13 +100,24 @@ class SemanticIndex:
         )
 
     def save(self, filepath: str) -> None:
-        """Persist vector index to disk."""
+        """Persist vector index to disk via pickle serialization.
+
+        Args:
+            filepath: Destination file path on disk.
+        """
         with open(filepath, "wb") as f:
             pickle.dump(self, f)
 
     @classmethod
     def load(cls, filepath: str) -> "SemanticIndex":
-        """Load vector index from disk."""
+        """Load vector index from disk.
+
+        Args:
+            filepath: File path to the pickled SemanticIndex.
+
+        Returns:
+            Loaded SemanticIndex object.
+        """
         with open(filepath, "rb") as f:
             index: SemanticIndex = pickle.load(f)
         return index
@@ -103,7 +125,15 @@ class SemanticIndex:
     def score_query(
         self, query: str, top_k: int = 10
     ) -> List[Tuple[int, float]]:
-        """Calculate cosine similarity against all chunk embeddings."""
+        """Calculate cosine similarity against all chunk embeddings.
+
+        Args:
+            query: The user query string.
+            top_k: Maximum number of top hits to return.
+
+        Returns:
+            List of (chunk_index, similarity_score) tuples.
+        """
         if not query.strip() or self.embeddings.numel() == 0:
             return []
 
@@ -164,12 +194,20 @@ class SemanticIndex:
         self._model.eval()
 
     def __getstate__(self) -> dict[str, Any]:
-        """Exclude runtime model objects from persisted index."""
+        """Exclude runtime model objects from persisted index state.
+
+        Returns:
+            Pickle-safe dictionary copy without active model handles.
+        """
         state = self.__dict__.copy()
         state["_tokenizer"] = None
         state["_model"] = None
         return state
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        """Restore index with unloaded runtime model."""
+        """Restore index state with unloaded runtime model handles.
+
+        Args:
+            state: Unpickled state dictionary.
+        """
         self.__dict__.update(state)

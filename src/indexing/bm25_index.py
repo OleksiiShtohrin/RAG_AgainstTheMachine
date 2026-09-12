@@ -19,7 +19,14 @@ class BM25Index:
 
     @classmethod
     def build(cls, chunks: List[Chunk]) -> "BM25Index":
-        """Build a BM25 index from chunks."""
+        """Build a BM25 index from a list of document chunks.
+
+        Args:
+            chunks: List of Chunk objects to tokenize and index.
+
+        Returns:
+            A built BM25Index instance ready for scoring.
+        """
         if not chunks:
             return cls(
                 chunks=[],
@@ -52,7 +59,14 @@ class BM25Index:
         self,
         query: str,
     ) -> List[Tuple[int, float]]:
-        """Score all chunks against query and return sorted results."""
+        """Score all chunks against query and return sorted results.
+
+        Args:
+            query: The user search query string.
+
+        Returns:
+            List of (chunk_index, score) pairs sorted in descending relevance.
+        """
         query_tokens = CodeTokenizer.tokenize(query)
 
         if not query_tokens or not self.chunks or self.bm25 is None:

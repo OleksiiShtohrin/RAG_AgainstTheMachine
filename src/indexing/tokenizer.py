@@ -12,7 +12,14 @@ class CodeTokenizer:
 
     @classmethod
     def tokenize(cls, text: str) -> List[str]:
-        """Split text into lowercase tokens and subwords."""
+        """Split text into lowercase tokens and decomposed identifier subwords.
+
+        Args:
+            text: Raw input query or document string.
+
+        Returns:
+            List of normalized lowercase tokens and sub-tokens.
+        """
         if not text:
             return []
 

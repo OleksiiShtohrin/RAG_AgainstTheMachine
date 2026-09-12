@@ -39,15 +39,30 @@ class CorpusReader:
     }
 
     def __init__(self, corpus_path: str = "data/raw") -> None:
-        """Initialize the reader with the corpus root directory."""
+        """Initialize the reader with the corpus root directory.
+
+        Args:
+            corpus_path: Root directory containing raw codebase files.
+        """
         self.corpus_path = Path(corpus_path)
 
     def read(self) -> list[Document]:
-        """Read all supported text files and return them as Documents."""
+        """Read all supported text files and return them as Documents.
+
+        Returns:
+            List of Document objects containing file paths and text content.
+        """
         return list(self.iter_documents())
 
     def iter_documents(self) -> Iterator[Document]:
-        """Yield supported corpus files one at a time."""
+        """Yield supported corpus files one at a time.
+
+        Yields:
+            Document instance for each readable supported file.
+
+        Raises:
+            FileNotFoundError: If the corpus directory does not exist.
+        """
         if not self.corpus_path.is_dir():
             raise FileNotFoundError(
                 f"Corpus directory not found: {self.corpus_path}"
@@ -68,7 +83,11 @@ class CorpusReader:
             )
 
     def _collect_files(self) -> list[Path]:
-        """Find supported files while skipping generated/cache directories."""
+        """Find supported files while skipping generated/cache directories.
+
+        Returns:
+            Sorted list of file Paths matching supported extensions.
+        """
         files: list[Path] = []
 
         for path in self.corpus_path.rglob("*"):
@@ -86,7 +105,14 @@ class CorpusReader:
         return sorted(files)
 
     def _relative_path(self, file_path: Path) -> str:
-        """Return a project-relative path when possible."""
+        """Return a project-relative path when possible.
+
+        Args:
+            file_path: Absolute or resolved file Path.
+
+        Returns:
+            POSIX-style relative path string from project root.
+        """
         resolved_file = file_path.resolve()
         project_root = Path.cwd().resolve()
 

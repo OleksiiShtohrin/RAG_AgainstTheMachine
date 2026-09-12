@@ -18,13 +18,24 @@ class IncrementalIndexer:
     """Manages incremental delta indexing for modified files."""
 
     def __init__(self, max_chunk_size: int = 2000) -> None:
-        """Initialize incremental indexer."""
+        """Initialize incremental indexer with maximum chunk size.
+
+        Args:
+            max_chunk_size: Maximum allowed characters per chunk.
+        """
         self.max_chunk_size = max_chunk_size
         self.base_indexer = CorpusIndexer(max_chunk_size=max_chunk_size)
 
     @staticmethod
     def _compute_file_hash(filepath: str) -> str:
-        """Compute SHA-256 hash of a file."""
+        """Compute SHA-256 hash of a file on disk.
+
+        Args:
+            filepath: Path to the target file.
+
+        Returns:
+            Hexadecimal SHA-256 digest string.
+        """
         hasher = hashlib.sha256()
         with open(filepath, "rb") as f:
             while chunk := f.read(65536):
@@ -32,12 +43,26 @@ class IncrementalIndexer:
         return hasher.hexdigest()
 
     def _collect_files(self, raw_dir: str) -> list[str]:
-        """Collect supported corpus files."""
+        """Collect supported corpus files from the raw directory.
+
+        Args:
+            raw_dir: Root path of raw corpus files.
+
+        Returns:
+            List of resolved string file paths.
+        """
         reader = CorpusReader(raw_dir)
         return [str(path) for path in reader._collect_files()]
 
     def _process_file(self, filepath: str) -> list[Chunk]:
-        """Read and chunk one corpus file."""
+        """Read and chunk one individual corpus file.
+
+        Args:
+            filepath: Absolute or relative file path to read.
+
+        Returns:
+            List of generated Chunk objects for this file.
+        """
         path = Path(filepath)
         content = path.read_text(
             encoding="utf-8",
@@ -57,7 +82,15 @@ class IncrementalIndexer:
     def update_index(
         self, raw_dir: str = "data/raw", output_dir: str = "data/processed"
     ) -> BM25Index:
-        """Incrementally update BM25 index by detecting file modifications."""
+        """Incrementally update BM25 index by detecting file modifications.
+
+        Args:
+            raw_dir: Path to directory of source files.
+            output_dir: Directory where index and manifest are stored.
+
+        Returns:
+            Updated BM25Index instance.
+        """
         manifest_path = os.path.join(output_dir, "manifest.json")
         index_path = os.path.join(output_dir, "bm25_index.pkl")
 
