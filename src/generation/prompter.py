@@ -11,8 +11,10 @@ class ContextPrompter:
     SYSTEM_PROMPT = (
         "You are an expert technical assistant for the vLLM codebase. "
         "Answer the question directly, accurately, and concisely based ONLY "
-        "on the provided context. Do not output internal thought processes. "
-        "If the answer is not present, state that it is unavailable."
+        "on the provided context. "
+        "Do not output internal thoughts or explanations. "
+        "If the answer cannot be found in the context, "
+        "state that it is unavailable."
     )
 
     @classmethod
@@ -79,13 +81,19 @@ class ContextPrompter:
 
     @classmethod
     def clean_output(cls, text: str) -> str:
-        """Remove any <think>...</think> tags if model produces them.
+        """Remove any thinking tags or monologue from model output.
 
         Args:
             text: Raw generated string from LLM inference.
 
         Returns:
-            Cleaned text with internal thinking tags stripped out.
+            Cleaned text containing only the final direct answer.
         """
+        # If there is a closing </think>, take only what comes after it
+        if "</think>" in text:
+            text = text.split("</think>", 1)[1]
+
+        # Strip any remaining tags
         cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        cleaned = re.sub(r"</?think>", "", cleaned)
         return cleaned.strip()

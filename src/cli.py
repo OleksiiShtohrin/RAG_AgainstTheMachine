@@ -87,6 +87,15 @@ class CLI:
                 print("Warning: k <= 0 requested, 0 results returned.")
                 return
 
+            index_path = os.path.join(index_dir, "bm25_index.pkl")
+            if not os.path.exists(index_path):
+                print(
+                    f"Error: Index not found at {index_path}. "
+                    "Run 'index' first.",
+                    file=sys.stderr,
+                )
+                return
+
             index = CorpusIndexer.load_index(index_dir)
             retriever = LexicalRetriever(index)
 
@@ -136,6 +145,15 @@ class CLI:
             index_dir: Folder containing BM25 index.
         """
         try:
+            index_path = os.path.join(index_dir, "bm25_index.pkl")
+            if not os.path.exists(index_path):
+                print(
+                    f"Error: Index not found at {index_path}. "
+                    "Run 'index' first.",
+                    file=sys.stderr,
+                )
+                return
+
             raw_data = read_json_file(dataset_path)
             if raw_data is None:
                 print(
@@ -203,8 +221,15 @@ class CLI:
                 return
 
             if k <= 0:
+                print("Warning: k <= 0 requested, 0 results returned.")
+                return
+
+            index_path = os.path.join(index_dir, "bm25_index.pkl")
+            if not os.path.exists(index_path):
                 print(
-                    "Warning: k <= 0 requested, 0 results returned."
+                    f"Error: Index not found at {index_path}. "
+                    "Run 'index' first.",
+                    file=sys.stderr,
                 )
                 return
 
@@ -305,7 +330,10 @@ class CLI:
             gt_raw = read_json_file(dataset_path)
 
             if student_raw is None or gt_raw is None:
-                print("Error: Could not load files.", file=sys.stderr)
+                print(
+                    "Error: Could not load files.",
+                    file=sys.stderr
+                )
                 return
 
             student_obj = StudentSearchResults.model_validate(student_raw)
@@ -352,15 +380,32 @@ class CLI:
             output_dir: Folder containing BM25 index and saving vector index.
             model_name: Identifier for sentence embedding model.
         """
-        from src.indexing.semantic_index import SemanticIndex
+        try:
+            bm25_path = os.path.join(output_dir, "bm25_index.pkl")
+            if not os.path.exists(bm25_path):
+                print(
+                    f"Error: BM25 index not found at {bm25_path}. "
+                    "Run 'index' first.",
+                    file=sys.stderr,
+                )
+                return
 
-        bm25_index = CorpusIndexer.load_index(output_dir)
-        print(f"Generating embeddings for {len(bm25_index.chunks)} chunks...")
-        sem_index = SemanticIndex.build(
-            bm25_index.chunks, model_name=model_name
-        )
-        sem_index.save(os.path.join(output_dir, "semantic_index.pkl"))
-        print("Semantic vector index successfully saved!")
+            from src.indexing.semantic_index import SemanticIndex
+
+            bm25_index = CorpusIndexer.load_index(output_dir)
+            print(
+                f"Generating embeddings for {len(bm25_index.chunks)} chunks..."
+            )
+            sem_index = SemanticIndex.build(
+                bm25_index.chunks, model_name=model_name
+            )
+            sem_index.save(os.path.join(output_dir, "semantic_index.pkl"))
+            print("Semantic vector index successfully saved!")
+        except Exception as e:
+            print(
+                f"An error occurred during semantic indexing: {e}",
+                file=sys.stderr,
+            )
 
     def index_incremental(
         self,
@@ -373,14 +418,27 @@ class CLI:
             raw_dir: Root path to raw documents folder.
             output_dir: Destination path for index and manifest.
         """
-        from src.indexing.incremental_indexer import IncrementalIndexer
+        try:
+            if not os.path.exists(raw_dir):
+                print(
+                    f"Error: Raw directory not found: {raw_dir}",
+                    file=sys.stderr,
+                )
+                return
 
-        indexer = IncrementalIndexer()
-        indexer.update_index(raw_dir=raw_dir, output_dir=output_dir)
+            from src.indexing.incremental_indexer import IncrementalIndexer
+
+            indexer = IncrementalIndexer()
+            indexer.update_index(raw_dir=raw_dir, output_dir=output_dir)
+        except Exception as e:
+            print(
+                f"An error occurred during incremental indexing: {e}",
+                file=sys.stderr,
+            )
 
     def search_hybrid(
         self,
-        query: str,
+        query: str = "",
         k: int = 5,
         output_dir: str = "data/processed",
     ) -> None:
@@ -391,39 +449,99 @@ class CLI:
             k: Number of top fused candidates to return.
             output_dir: Folder containing both BM25 and vector indices.
         """
-        from src.indexing.semantic_index import SemanticIndex
-        from src.retrieval.hybrid_retriever import HybridRetriever
+        try:
+            if not query.strip():
+                print(
+                    "Error: Search query cannot be empty.",
+                    file=sys.stderr,
+                )
+                return
 
-        bm25_idx = CorpusIndexer.load_index(output_dir)
-        sem_idx = SemanticIndex.load(
-            os.path.join(output_dir, "semantic_index.pkl")
-        )
-        retriever = HybridRetriever(bm25_idx, sem_idx)
+            if k <= 0:
+                print(
+                    "Warning: k <= 0 requested, 0 results returned."
+                )
+                return
 
-        cache = QueryCache()
+            cache = QueryCache()
 
-        cached = cache.get(
-            "hybrid_search",
-            query,
-            k=k,
-            output_dir=output_dir,
-        )
-
-        if cached is not None:
-            sources = [MinimalSource(**item) for item in cached]
-        else:
-            sources = retriever.retrieve(query, k=k)
-            cache.set(
+            cached = cache.get(
                 "hybrid_search",
                 query,
-                [source.model_dump() for source in sources],
                 k=k,
                 output_dir=output_dir,
             )
 
-        for s in sources:
-            loc = f"[{s.first_character_index}:{s.last_character_index}]"
-            print(f"{s.file_path} {loc}")
+            if cached is not None:
+                sources = [
+                    MinimalSource(**item)
+                    for item in cached
+                ]
+            else:
+                bm25_path = os.path.join(
+                    output_dir,
+                    "bm25_index.pkl",
+                )
+                sem_path = os.path.join(
+                    output_dir,
+                    "semantic_index.pkl",
+                )
+
+                if not os.path.exists(bm25_path):
+                    print(
+                        f"Error: BM25 index not found at {bm25_path}. "
+                        "Please run 'index' first.",
+                        file=sys.stderr,
+                    )
+                    return
+
+                if not os.path.exists(sem_path):
+                    print(
+                        f"Error: Semantic index not found at {sem_path}. "
+                        "Please run 'index_semantic' first.",
+                        file=sys.stderr,
+                    )
+                    return
+
+                from src.indexing.semantic_index import SemanticIndex
+                from src.retrieval.hybrid_retriever import HybridRetriever
+
+                bm25_idx = CorpusIndexer.load_index(output_dir)
+                sem_idx = SemanticIndex.load(sem_path)
+
+                retriever = HybridRetriever(
+                    bm25_idx,
+                    sem_idx,
+                )
+
+                sources = retriever.retrieve(
+                    query,
+                    k=k,
+                )
+
+                cache.set(
+                    "hybrid_search",
+                    query,
+                    [
+                        source.model_dump()
+                        for source in sources
+                    ],
+                    k=k,
+                    output_dir=output_dir,
+                )
+
+            for source in sources:
+                loc = (
+                    f"[{source.first_character_index}:"
+                    f"{source.last_character_index}]"
+                )
+                print(f"{source.file_path} {loc}")
+
+        except Exception as e:
+            print(
+                f"An error occurred during hybrid search: {e}",
+                file=sys.stderr,
+            )
 
     def search_hybrid_dataset(
         self,
@@ -443,6 +561,25 @@ class CLI:
             output_dir: Directory where index files are located.
         """
         try:
+            bm25_path = os.path.join(output_dir, "bm25_index.pkl")
+            sem_path = os.path.join(output_dir, "semantic_index.pkl")
+
+            if not os.path.exists(bm25_path):
+                print(
+                    f"Error: BM25 index not found at {bm25_path}. "
+                    "Run 'index' first.",
+                    file=sys.stderr,
+                )
+                return
+
+            if not os.path.exists(sem_path):
+                print(
+                    f"Error: Semantic index not found at {sem_path}. "
+                    "Run 'index_semantic' first.",
+                    file=sys.stderr,
+                )
+                return
+
             raw_data = read_json_file(dataset_path)
             if raw_data is None:
                 print(
@@ -461,9 +598,7 @@ class CLI:
             from src.retrieval.hybrid_retriever import HybridRetriever
 
             bm25_index = CorpusIndexer.load_index(output_dir)
-            semantic_index = SemanticIndex.load(
-                os.path.join(output_dir, "semantic_index.pkl")
-            )
+            semantic_index = SemanticIndex.load(sem_path)
             retriever = HybridRetriever(
                 bm25_index,
                 semantic_index,
@@ -526,7 +661,13 @@ class CLI:
             host: Binding IP host interface.
             port: Binding TCP listening port.
         """
-        import uvicorn
+        try:
+            import uvicorn
 
-        print(f"Starting RAG API at http://{host}:{port}")
-        uvicorn.run("src.server:app", host=host, port=port, reload=False)
+            print(f"Starting RAG API at http://{host}:{port}")
+            uvicorn.run("src.server:app", host=host, port=port, reload=False)
+        except Exception as e:
+            print(
+                f"An error occurred while running server: {e}",
+                file=sys.stderr,
+            )

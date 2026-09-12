@@ -77,11 +77,26 @@ class AnswerGenerator:
         )
         messages = ContextPrompter.build_chat_messages(question, context)
 
-        prompt_text = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
+        # Apply chat template with non-thinking mode for Qwen3
+        try:
+            raw_prompt = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=False,
+            )
+        except TypeError:
+            raw_prompt = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+
+        prompt_text = str(raw_prompt)
+
+        # Force close thinking block so Qwen3 writes the final answer directly
+        if "<think>" not in prompt_text:
+            prompt_text = f"{prompt_text}<think>\n\n</think>\n\n"
 
         inputs = self.tokenizer([prompt_text], return_tensors="pt").to(
             self.device
