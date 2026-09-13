@@ -43,6 +43,10 @@ exclude = [
     "^tests/",
 ]
 
+[[tool.mypy.overrides]]
+module = ["src.server", "src.server.*"]
+disallow_untyped_decorators = false
+
 # --- CPU-only PyTorch optimization for uv ---
 [[tool.uv.index]]
 name = "pytorch-cpu"
