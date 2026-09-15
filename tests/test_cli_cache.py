@@ -83,6 +83,9 @@ def test_search_hybrid_uses_cache_on_second_call(
         lambda index_dir: object(),
     )
 
+    (tmp_path / "bm25_index.pkl").write_bytes(b"fake")
+    (tmp_path / "semantic_index.pkl").write_bytes(b"fake")
+
     cache_dir = tmp_path / "cache"
 
     monkeypatch.setattr(
@@ -93,8 +96,16 @@ def test_search_hybrid_uses_cache_on_second_call(
 
     cli = CLI()
 
-    cli.search_hybrid("What is Python?", k=5)
-    cli.search_hybrid("What is Python?", k=5)
+    cli.search_hybrid(
+        "What is Python?",
+        k=5,
+        output_dir=str(tmp_path),
+    )
+    cli.search_hybrid(
+        "What is Python?",
+        k=5,
+        output_dir=str(tmp_path),
+    )
 
     assert retrieve_calls == 1
 

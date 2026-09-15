@@ -383,6 +383,29 @@ Two cache mechanisms are provided.
 
 `QueryCache` stores query results on disk using deterministic SHA-256 keys, allowing repeated queries to reuse previously computed results.
 
+#### Verifying In-Memory IndexCache
+
+Run the following benchmark snippet to verify that repeated index loads within the same process reuse the in-memory instance without redundant disk I/O:
+
+```bash
+uv run python -c "
+import time
+from src.indexing.indexer import CorpusIndexer
+
+t0 = time.perf_counter()
+idx1 = CorpusIndexer.load_index('data/processed')
+t1 = time.perf_counter()
+
+t2 = time.perf_counter()
+idx2 = CorpusIndexer.load_index('data/processed')
+t3 = time.perf_counter()
+
+print(f'Cold load:   {(t1 - t0):.5f} s')
+print(f'Cached load: {(t3 - t2):.7f} s')
+print(f'Same object in RAM (idx1 is idx2): {idx1 is idx2}')
+"
+```
+
 ### 5. Local HTTP API
 
 A local FastAPI server exposes the RAG functionality.
